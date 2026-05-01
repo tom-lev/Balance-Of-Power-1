@@ -5,9 +5,6 @@ on:
     - cron: '0 6 * * 1'   # כל יום שני בשעה 06:00 UTC
   workflow_dispatch:        # אפשרות להרצה ידנית
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 # Only one run at a time; additional triggers queue and wait.
 concurrency:
   group: update-world-leaders
@@ -20,11 +17,11 @@ jobs:
       contents: write       # נדרש כדי לדחוף ל-main
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
