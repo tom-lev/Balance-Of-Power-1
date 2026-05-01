@@ -114,11 +114,23 @@ def run_scraper():
             print("⚠️  Timed out waiting for country links — page may be blocked or empty.")
 
         print("⚡ Selecting 'All' option...")
-        try:
-            page.select_option("select.per-page", label="All")
-            page.wait_for_load_state("networkidle")
-            time.sleep(3)
-        except Exception:
+        _all_selected = False
+        for _strategy in [
+            lambda: page.select_option("select.per-page", label="All", timeout=3000),
+            lambda: page.select_option("select", label="All", timeout=3000),
+            lambda: page.get_by_role("button", name="All").click(timeout=3000),
+            lambda: page.get_by_role("link", name="All").click(timeout=3000),
+            lambda: page.locator("text=All").first.click(timeout=3000),
+        ]:
+            try:
+                _strategy()
+                page.wait_for_load_state("networkidle")
+                time.sleep(2)
+                _all_selected = True
+                break
+            except Exception:
+                continue
+        if not _all_selected:
             print("⚠️  Could not switch to 'All', continuing.")
 
         links = page.locator('main a[href*="/world-leaders/foreign-governments/"]').all()
