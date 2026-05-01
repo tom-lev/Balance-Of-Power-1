@@ -1,0 +1,37 @@
+name: Update World Leaders
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # כל יום שני בשעה 06:00 UTC
+  workflow_dispatch:        # אפשרות להרצה ידנית
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # נדרש כדי לדחוף ל-main
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Run scraper
+        run: python world_leaders_scraper.py
+        env:
+          CI: "true"        # מפעיל headless mode בסקרייפר
+
+      - name: Commit and push JSON
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add top_world_leaders.json
+          git diff --cached --quiet || git commit -m "chore: update world leaders data [$(date -u +%Y-%m-%d)]"
+          git push
