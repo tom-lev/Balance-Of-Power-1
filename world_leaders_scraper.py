@@ -85,19 +85,52 @@ def run_scraper():
 
     with sync_playwright() as p:
         headless = os.environ.get("CI", "false") == "true"
-        browser = p.chromium.launch(headless=headless)
-        context = browser.new_context()
+        browser = p.chromium.launch(
+            headless=headless,
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        context = browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            viewport={"width": 1920, "height": 1080},
+            extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
+        )
         page = context.new_page()
+        # Hide the webdriver flag that headless Chrome exposes to bot detectors
+        page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
         print("🔗 Loading index page...")
         page.goto(index_url, wait_until="networkidle")
+        # Wait for at least one country link to confirm real content loaded
+        try:
+            page.wait_for_selector(
+                'main a[href*="/world-leaders/foreign-governments/"]',
+                timeout=15000,
+            )
+        except Exception:
+            print("⚠️  Timed out waiting for country links — page may be blocked or empty.")
 
         print("⚡ Selecting 'All' option...")
-        try:
-            page.select_option("select.per-page", label="All")
-            page.wait_for_load_state("networkidle")
-            time.sleep(3)
-        except Exception:
+        _all_selected = False
+        for _strategy in [
+            lambda: page.select_option("select.per-page", label="All", timeout=3000),
+            lambda: page.select_option("select", label="All", timeout=3000),
+            lambda: page.get_by_role("button", name="All").click(timeout=3000),
+            lambda: page.get_by_role("link", name="All").click(timeout=3000),
+            lambda: page.locator("text=All").first.click(timeout=3000),
+        ]:
+            try:
+                _strategy()
+                page.wait_for_load_state("networkidle")
+                time.sleep(2)
+                _all_selected = True
+                break
+            except Exception:
+                continue
+        if not _all_selected:
             print("⚠️  Could not switch to 'All', continuing.")
 
         links = page.locator('main a[href*="/world-leaders/foreign-governments/"]').all()
