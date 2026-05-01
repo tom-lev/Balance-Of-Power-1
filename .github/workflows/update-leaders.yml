@@ -2,14 +2,14 @@ name: Update World Leaders
 
 on:
   schedule:
-    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
-  workflow_dispatch:       # Allow manual trigger from the Actions tab
+    - cron: '0 6 * * 1'   # כל יום שני בשעה 06:00 UTC
+  workflow_dispatch:        # אפשרות להרצה ידנית
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write       # נדרש כדי לדחוף ל-main
 
     steps:
       - uses: actions/checkout@v4
@@ -20,15 +20,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install playwright
           playwright install chromium --with-deps
 
       - name: Run scraper
         run: python world_leaders_scraper.py
         env:
-          CI: "true"
+          CI: "true"        # מפעיל headless mode בסקרייפר
 
-      - name: Commit updated JSON
+      - name: Commit and push JSON
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
